@@ -1,9 +1,12 @@
+import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 
-// ponytail: model IDs env-overridable — spec says verify text IDs with a throwaway call before trusting
-export const TEXT_MODEL_FAST = process.env.TEXT_MODEL_FAST ?? 'google/gemini-3.1-flash';
-export const TEXT_MODEL_PRO = process.env.TEXT_MODEL_PRO ?? 'google/gemini-3-pro';
-export const IMAGE_MODEL = process.env.IMAGE_MODEL ?? 'google/imagen-4.0-fast-generate-001';
+// ponytail: flash-lite, not gemini-3.5-flash — 3.5-flash free tier is 20 req/day/model,
+// one game (1 case + up to 12 turns) burns most of it, then every call 429s and the app
+// silently degrades to PRESET_CASE + SHRUG_LINES. flash-lite has its own, far larger
+// free bucket. Pro models still have 0 free quota on this key. Bump once billing's on.
+export const TEXT_MODEL_FAST = google(process.env.TEXT_MODEL_FAST ?? 'gemini-3.1-flash-lite');
+export const TEXT_MODEL_PRO = google(process.env.TEXT_MODEL_PRO ?? 'gemini-3.1-flash-lite');
 
 export const EvidenceSchema = z.object({
   item: z.string(),
