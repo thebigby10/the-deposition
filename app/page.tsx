@@ -23,6 +23,14 @@ const SHRUG_LINES = [
 const EXAMPLE_CHIPS = [
   'A celebrated chef whose rival collapsed during service at her restaurant',
   'A night-shift security guard at a museum where a painting vanished without a single alarm',
+  'A volunteer firefighter who was first on the scene of a blaze at his own storage unit',
+  'An air-traffic controller on shift the night two planes came within fifty feet over the bay',
+  'A retirement-home nurse whose patients keep rewriting their wills in her favor',
+  'A rideshare driver whose last passenger never arrived at the address in the app',
+  'An antiques dealer offering a lost Fabergé egg the week one vanished from a private vault',
+  'A church organist on duty the night the donation box disappeared and the vestry lock was changed',
+  'A glaciologist whose research partner fell into a crevasse the day their findings diverged',
+  'A wedding planner whose groom vanished between the rehearsal dinner and the ceremony',
 ];
 
 const RANKS: Record<string, { rank: string; blurb: string }> = {
@@ -44,6 +52,7 @@ export default function Home() {
   const [ending, setEnding] = useState<Ending>(null);
   const [input, setInput] = useState('');
   const [premise, setPremise] = useState('');
+  const [enhancing, setEnhancing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [accuseMode, setAccuseMode] = useState(false);
   const [pulseKey, setPulseKey] = useState(0);
@@ -113,6 +122,24 @@ export default function Home() {
       setPortraitUrl(data?.dataUrl ?? SILHOUETTE);
     } catch {
       setPortraitUrl(SILHOUETTE);
+    }
+  }
+
+  async function enhance() {
+    if (!premise.trim() || enhancing) return;
+    setEnhancing(true);
+    try {
+      const res = await fetch('/api/enhance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: premise }),
+      });
+      const d = res.ok ? await res.json() : null;
+      if (d?.description) setPremise(String(d.description).slice(0, 200));
+    } catch {
+      /* keep the original premise */
+    } finally {
+      setEnhancing(false);
     }
   }
 
@@ -233,24 +260,34 @@ export default function Home() {
             rows={2}
             className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-3 text-sm outline-none focus:border-amber-600 resize-none"
           />
-          <div className="flex gap-2 mt-2 flex-wrap">
+          <div className="grid grid-cols-2 gap-2 mt-2">
             {EXAMPLE_CHIPS.map((c) => (
               <button
                 key={c}
                 onClick={() => setPremise(c)}
-                className="text-xs border border-neutral-700 rounded-full px-3 py-1 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200 transition"
+                title={c}
+                className="text-xs text-left truncate border border-neutral-700 rounded-full px-3 py-1 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200 transition"
               >
-                {c.slice(0, 52)}…
+                {c}
               </button>
             ))}
           </div>
-          <button
-            onClick={() => premise.trim() && startCase(false)}
-            disabled={!premise.trim()}
-            className="mt-3 w-full bg-amber-700 hover:bg-amber-600 disabled:opacity-40 disabled:hover:bg-amber-700 rounded-lg py-2.5 font-semibold tracking-wide transition"
-          >
-            GENERATE CASE
-          </button>
+          <div className="mt-3 flex gap-2">
+            <button
+              onClick={enhance}
+              disabled={!premise.trim() || enhancing}
+              className="px-4 border border-neutral-700 rounded-lg py-2.5 text-sm text-neutral-300 hover:border-amber-600 disabled:opacity-40 transition"
+            >
+              {enhancing ? 'Enhancing…' : 'Enhance'}
+            </button>
+            <button
+              onClick={() => premise.trim() && startCase(false)}
+              disabled={!premise.trim() || enhancing}
+              className="flex-1 bg-amber-700 hover:bg-amber-600 disabled:opacity-40 disabled:hover:bg-amber-700 rounded-lg py-2.5 font-semibold tracking-wide transition"
+            >
+              GENERATE CASE
+            </button>
+          </div>
         </div>
       </main>
     );
