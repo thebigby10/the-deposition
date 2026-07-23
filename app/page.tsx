@@ -374,7 +374,7 @@ export default function Home() {
                 Case File · Preset · {diff.name}
               </div>
               <div className="mt-1 text-xl font-semibold">{PRESET_CASE.scenario.title}</div>
-              <div key={difficulty} className="reel mt-1 text-sm text-neutral-400">
+              <div key={difficulty} className="reel mt-1 text-sm text-neutral-400 min-h-[3.75rem]">
                 {presetCase(difficulty).scenario.incident}
               </div>
             </button>
