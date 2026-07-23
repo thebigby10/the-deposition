@@ -278,7 +278,7 @@ export default function Home() {
                     onClick={() => setShowSettings((v) => !v)}
                     title="Use your own Gemini API key"
                     aria-label="Settings"
-                    className={`w-7 h-7 flex items-center justify-center rounded border transition ${
+                    className={`relative w-7 h-7 flex items-center justify-center rounded border transition ${
                       showSettings
                         ? 'border-amber-600 text-amber-500'
                         : 'border-neutral-700 text-neutral-500 hover:border-amber-600 hover:text-amber-500'
@@ -288,6 +288,9 @@ export default function Home() {
                       <circle cx="12" cy="12" r="3" />
                       <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
                     </svg>
+                    {!apiKey.trim() && (
+                      <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-red-500" />
+                    )}
                   </button>
                 </div>
 
@@ -326,21 +329,32 @@ export default function Home() {
                     </ol>
                   </div>
                 ) : (
-                  <ol className="divide-y divide-neutral-800">
-                    {TUTORIAL_STEPS.map((step) => (
-                      <li key={step.n} className="flex items-center gap-4 py-4">
-                        <span className="shrink-0 w-9 h-9 flex items-center justify-center rounded border border-amber-700/40 font-mono text-sm text-amber-600">
-                          {step.n}
-                        </span>
-                        <div>
-                          <div className="text-sm font-semibold uppercase tracking-wide text-neutral-100">
-                            {step.title}
+                  <>
+                    {!apiKey.trim() && (
+                      <button
+                        onClick={() => setShowSettings(true)}
+                        className="mt-4 w-full text-left text-xs text-neutral-500 italic border-l-2 border-amber-700/50 pl-3 hover:text-neutral-400 transition"
+                      >
+                        Running on the shared free-tier quota.{' '}
+                        <span className="text-amber-600 not-italic">Add your own Gemini key →</span>
+                      </button>
+                    )}
+                    <ol className="divide-y divide-neutral-800">
+                      {TUTORIAL_STEPS.map((step) => (
+                        <li key={step.n} className="flex items-center gap-4 py-4">
+                          <span className="shrink-0 w-9 h-9 flex items-center justify-center rounded border border-amber-700/40 font-mono text-sm text-amber-600">
+                            {step.n}
+                          </span>
+                          <div>
+                            <div className="text-sm font-semibold uppercase tracking-wide text-neutral-100">
+                              {step.title}
+                            </div>
+                            <div className="text-sm text-neutral-400">{step.line}</div>
                           </div>
-                          <div className="text-sm text-neutral-400">{step.line}</div>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
+                        </li>
+                      ))}
+                    </ol>
+                  </>
                 )}
                 <button
                   onClick={showSettings ? () => setShowSettings(false) : closeTutorial}
