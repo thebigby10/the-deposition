@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { DIFFICULTIES, PRESET_CASE, type Case, type Turn } from '@/lib/game';
+import { DIFFICULTIES, PRESET_CASE, presetCase, type Case, type Turn } from '@/lib/game';
 
 const Portrait = dynamic(() => import('@/components/Portrait'), { ssr: false });
 
@@ -122,7 +122,7 @@ export default function Home() {
     setAccuseMode(false);
     setFinalVerdict('');
 
-    let c = PRESET_CASE;
+    let c = presetCase(difficulty);
     if (!preset) {
       try {
         const res = await fetch('/api/generate-case', {
@@ -370,9 +370,13 @@ export default function Home() {
               onClick={() => startCase(true)}
               className="w-full text-left border border-neutral-700 rounded-lg p-5 hover:border-amber-600 hover:bg-neutral-900 transition"
             >
-              <div className="text-xs uppercase tracking-widest text-amber-600">Case File · Preset</div>
+              <div className="text-xs uppercase tracking-widest text-amber-600">
+                Case File · Preset · {diff.name}
+              </div>
               <div className="mt-1 text-xl font-semibold">{PRESET_CASE.scenario.title}</div>
-              <div className="mt-1 text-sm text-neutral-400">{PRESET_CASE.scenario.incident}</div>
+              <div key={difficulty} className="reel mt-1 text-sm text-neutral-400">
+                {presetCase(difficulty).scenario.incident}
+              </div>
             </button>
             <div>
               <div className="text-xs uppercase tracking-widest text-neutral-500 mb-2">Or open a new case</div>

@@ -235,6 +235,83 @@ export const PRESET_CASE: Case = {
   },
 };
 
-// self-check: preset must satisfy its own schema + validator
-CaseSchema.parse(PRESET_CASE);
-if (!validateCase(PRESET_CASE)) throw new Error('preset case fails validation');
+// Per-difficulty retellings of the preset case: same secret and contradictions,
+// but the timeline tightens, the evidence goes oblique, and the breaking point
+// narrows. Index 1 (Gumshoe) is the base text above.
+const PRESET_TUNING: Record<
+  number,
+  { incident: string; timeline: string; details: [string, string, string]; breaking_point: string }
+> = {
+  0: {
+    incident:
+      'At 11:52pm on March 3rd, the Point Alder lighthouse went dark for eleven minutes and nobody can say why. The freighter Cormorant struck the shoals in the dark. Two crew are missing — and the keeper’s story has holes you can see from the dock.',
+    timeline:
+      "11:40pm — keeper logs 'all systems normal'. 11:52pm — the light goes dark; nothing in the log explains why. 12:03am — the light returns. 12:07am — Cormorant strikes the shoals. 12:30am — keeper radios the coast guard. Eleven dark minutes, unaccounted for.",
+    details: [
+      "The 11pm–midnight page is written in one clean, unbroken hand — every other page in the book has smudges and corrections. It was plainly rewritten after the fact. Final entry: 'Lamp fault, self-resolved.'",
+      "Her 12:30am distress call gives the Cormorant's position on the shoals — a spot visible only from the cove-side window of the cottage, not from the lamp room where she says she spent the night.",
+      "Halloway's fuel dock, 9:15pm that night, for the fishing boat 'Petrel' — registered to her son, Danny Voss. She kept the receipt tucked inside the keeper's log.",
+    ],
+    breaking_point:
+      'Any firm confrontation that puts Danny on the water that night — his name pressed together with almost any piece of the evidence.',
+  },
+  2: {
+    incident:
+      'At 11:52pm on March 3rd, the Point Alder lighthouse went dark for eleven minutes. The freighter Cormorant struck the shoals. Two crew are missing. The keeper’s log says mechanical fault — and the paperwork almost holds.',
+    timeline:
+      "11:38pm — weather noted in the log. 11:40pm — 'all systems normal'. 11:47pm — generator self-test passes (auto-logged). 11:52pm — light goes dark. 12:03am — light returns. 12:07am — Cormorant strikes the shoals. 12:19am — a shore patrol logs the keeper near the fuel shed. 12:30am — distress call.",
+    details: [
+      "The 11pm–midnight page reads clean — no smudges, no corrections. Final entry: 'Lamp fault, self-resolved.' The ink matches the desk pen kept in the cottage, not the pen chained in the lamp room.",
+      "Her 12:30am call gives the Cormorant's position to a fraction of a degree. The chart's sightlines show that bearing is blocked from the lamp gallery by the cliff shoulder.",
+      "Halloway's dock, 9:15pm, fuel for the 'Petrel'. The owner line is smudged illegible; the harbor registry book lists the Petrel under 'D. Voss'.",
+    ],
+    breaking_point: "Danny named as the Petrel's owner, pressed together with the 9:15pm fuel receipt.",
+  },
+  3: {
+    incident:
+      'Eleven dark minutes at Point Alder, and the Cormorant on the shoals with two crew missing. The inquiry leans toward blaming the freighter’s own helm — she was off her filed course when the light died. Something about the keeper’s tidy log won’t sit.',
+    timeline:
+      "11:40pm — 'all systems normal'. 11:45pm — the Cormorant makes a short transmission on an unlogged working channel, south of her filed course. 11:47pm — generator self-test passes. 11:52pm — light goes dark. 12:03am — light returns. 12:07am — Cormorant strikes the shoals. 12:19am — shore patrol logs the keeper near the fuel shed. 12:30am — distress call.",
+    details: [
+      "The final page is even, unbroken handwriting; the entry reads 'Lamp fault, self-resolved.' Stapled behind it, a service card: the rotation motor was overhauled and passed inspection two weeks earlier.",
+      "The 12:30am call fixes the wreck's position precisely. The same tape holds the Cormorant's 11:45pm transmission — she was running south of her filed course when the light went out.",
+      "Halloway's dock, 9:15pm: fuel for the 'Petrel', plus two drums of lamp oil charged to the lighthouse account. The signature is initials only.",
+    ],
+    breaking_point:
+      "Danny put on the water by name with the 9:15pm receipt, together with the cove-window sightline from the transcript.",
+  },
+  4: {
+    incident:
+      'Eleven dark minutes at Point Alder, a freighter on the shoals, two crew lost — and a log that accounts for every one of those minutes. The file has been closed as mechanical failure for years. Everyone but you has signed off on it.',
+    timeline:
+      "11:40pm — 'all systems normal' logged. 11:47pm — generator self-test passes. 11:52pm — log notes 'routine lens wipe; lamp briefly shuttered'. 12:03am — 'lens wipe complete, lamp restored'. 12:07am — Cormorant strikes the shoals. 12:19am — shore patrol logs the keeper near the boathouse, which she has never mentioned. 12:30am — distress call. On paper, every minute is accounted for.",
+    details: [
+      "Every entry accounted for, the hand steady throughout. Only against the older volumes does anything show: in thirty-one years of logs, no lens wipe was ever performed at night.",
+      "The 12:30am call gives the wreck's position and nothing more. Plotted on the chart, the bearing falls outside every sightline from the lamp gallery.",
+      "A fuel slip from Halloway's dock, 9:15pm, boat name 'Petrel'. The slip is unsigned; the dock hand remembers only 'a young man in a hurry'.",
+    ],
+    breaking_point:
+      "Danny's name, stated as the Petrel's pilot that night, put together with the 9:15pm fuel slip — nothing less.",
+  },
+};
+
+export function presetCase(difficulty: number): Case {
+  const t = PRESET_TUNING[difficulty];
+  if (!t) return PRESET_CASE;
+  return {
+    scenario: {
+      ...PRESET_CASE.scenario,
+      incident: t.incident,
+      timeline: t.timeline,
+      evidence: PRESET_CASE.scenario.evidence.map((e, i) => ({ ...e, detail: t.details[i] })),
+    },
+    suspect: { ...PRESET_CASE.suspect, breaking_point: t.breaking_point },
+  };
+}
+
+// self-check: every preset variant must satisfy the schema + validator
+for (let i = 0; i < 5; i++) {
+  const c = presetCase(i);
+  CaseSchema.parse(c);
+  if (!validateCase(c)) throw new Error(`preset case (difficulty ${i}) fails validation`);
+}

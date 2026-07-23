@@ -1,5 +1,5 @@
 import { generateObject } from 'ai';
-import { CaseSchema, DIFFICULTIES, DifficultySchema, PRESET_CASE, pickModel, validateCase } from '@/lib/game';
+import { CaseSchema, DIFFICULTIES, DifficultySchema, pickModel, presetCase, validateCase } from '@/lib/game';
 
 export const maxDuration = 60;
 
@@ -55,7 +55,8 @@ export async function POST(req: Request) {
   const premise = String(body.description ?? '')
     .replace(/[\r\n]+/g, ' ')
     .slice(0, 200);
-  const diff = DIFFICULTIES[DifficultySchema.parse(body.difficulty)];
+  const level = DifficultySchema.parse(body.difficulty);
+  const diff = DIFFICULTIES[level];
   const prompt = CASE_PROMPT.replace('{difficulty}', diff.casePrompt).replace(
     '{description}',
     premise || 'an interrogation worth playing'
@@ -74,5 +75,5 @@ export async function POST(req: Request) {
       // retry once, then fall through to the cached case
     }
   }
-  return Response.json(PRESET_CASE);
+  return Response.json(presetCase(level));
 }
