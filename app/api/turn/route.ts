@@ -1,5 +1,5 @@
 import { generateObject } from 'ai';
-import { CaseSchema, pickModel, TurnSchema } from '@/lib/game';
+import { CaseSchema, DIFFICULTIES, DifficultySchema, pickModel, TurnSchema } from '@/lib/game';
 import { z } from 'zod';
 
 export const maxDuration = 60;
@@ -11,6 +11,7 @@ const BodySchema = z.object({
   facts: z.array(z.string()),
   question: z.string().min(1).max(500),
   apiKey: z.string().optional(),
+  difficulty: DifficultySchema.optional(),
 });
 
 export async function POST(req: Request) {
@@ -18,6 +19,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return Response.json({ error: 'bad request' }, { status: 400 });
   const { case: c, history, suspicion, facts, question } = parsed.data;
   const s = c.suspect;
+  const diff = DIFFICULTIES[parsed.data.difficulty ?? 1];
 
   const transcript = history
     .slice(-12)
@@ -40,6 +42,8 @@ NEVER VOLUNTEER THE SECRET. You want this interview to end with your
 secret intact. Deflect, minimise, give partial truths, redirect to
 irrelevant detail. You may admit small embarrassing things to seem
 cooperative — that is good play.
+
+${diff.turnPrompt}
 
 CURRENT SUSPICION: ${suspicion}/100
 
@@ -85,6 +89,6 @@ your breaking point (${s.breaking_point}) is reached.`;
     schema: TurnSchema,
     prompt,
   });
-  object.suspicion_delta = Math.max(-15, Math.min(30, object.suspicion_delta));
+  object.suspicion_delta = Math.max(diff.deltaMin, Math.min(diff.deltaMax, object.suspicion_delta));
   return Response.json(object);
 }

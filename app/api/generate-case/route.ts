@@ -1,5 +1,5 @@
 import { generateObject } from 'ai';
-import { CaseSchema, PRESET_CASE, pickModel, validateCase } from '@/lib/game';
+import { CaseSchema, DIFFICULTIES, DifficultySchema, PRESET_CASE, pickModel, validateCase } from '@/lib/game';
 
 export const maxDuration = 60;
 
@@ -42,6 +42,8 @@ Tone: grounded procedural drama. No supernatural elements. No confessions
 in the opening_line. All characters are fictional; if the premise names a
 real living person, invent a fictional character instead.
 
+{difficulty}
+
 USER PREMISE: {description}
 
 If the premise describes a person, build the incident around them.
@@ -53,7 +55,11 @@ export async function POST(req: Request) {
   const premise = String(body.description ?? '')
     .replace(/[\r\n]+/g, ' ')
     .slice(0, 200);
-  const prompt = CASE_PROMPT.replace('{description}', premise || 'an interrogation worth playing');
+  const diff = DIFFICULTIES[DifficultySchema.parse(body.difficulty)];
+  const prompt = CASE_PROMPT.replace('{difficulty}', diff.casePrompt).replace(
+    '{description}',
+    premise || 'an interrogation worth playing'
+  );
   const model = pickModel(body.apiKey, true);
 
   for (let attempt = 0; attempt < 2; attempt++) {

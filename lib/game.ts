@@ -69,6 +69,93 @@ export const TurnSchema = z.object({
 export type Case = z.infer<typeof CaseSchema>;
 export type Turn = z.infer<typeof TurnSchema>;
 
+// Five difficulty levels. Each one changes the generated story, the suspect's
+// behaviour under questioning, the accusation grading, and the table rules.
+export const DIFFICULTIES = [
+  {
+    name: 'Beat Cop',
+    tagline: 'A nervous suspect, a paper-thin alibi. Fourteen questions.',
+    questions: 14,
+    wrongAccusePenalty: 15,
+    showTells: true,
+    showSuspicionNumber: true,
+    deltaMin: -15,
+    deltaMax: 20,
+    casePrompt:
+      'DIFFICULTY — EASY. The suspect is an amateur under pressure. Evidence details may come close to stating the contradiction outright. One simple story thread, a plain motive. The timeline is loose — it spans hours with one OBVIOUS unexplained gap, and the secret sits squarely in that gap. Evidence items carry plain times and dates that point at the gap directly. breaking_point may be broad — any firm confrontation with the right evidence.',
+    turnPrompt:
+      'YOUR DISCIPLINE AS A LIAR: poor. You over-explain, contradict yourself when nervous, and let small damaging truths slip when a question surprises you. If the investigator presses the same contradiction twice with its evidence, treat that as reaching your breaking point. Your tells are obvious — trembling hands, broken eye contact.',
+    accusePrompt:
+      'Grade VERY generously: if the accusation points at roughly the right act or the right motive, even half-formed, it is correct.',
+  },
+  {
+    name: 'Gumshoe',
+    tagline: 'They rehearsed a story — but nerves show at the seams. Twelve questions.',
+    questions: 12,
+    wrongAccusePenalty: 20,
+    showTells: true,
+    showSuspicionNumber: true,
+    deltaMin: -15,
+    deltaMax: 25,
+    casePrompt:
+      'DIFFICULTY — LIGHT. The suspect prepared a cover story but is not a practiced liar. Evidence hints clearly at each contradiction without stating it. A straightforward story with one small wrinkle. The timeline is simple with a visible gap where the secret sits; evidence times line up with the gap without much cross-referencing.',
+    turnPrompt:
+      'YOUR DISCIPLINE AS A LIAR: adequate but nervous. Your cover story holds under casual questioning, but direct evidence makes you stumble — you hedge, revise details, and your tells are readable.',
+    accusePrompt:
+      'Grade generously: the right act and roughly the right motive is correct, even with details wrong or missing.',
+  },
+  {
+    name: 'Inspector',
+    tagline: 'A practiced liar, oblique evidence, one false lead. Ten questions.',
+    questions: 10,
+    wrongAccusePenalty: 30,
+    showTells: true,
+    showSuspicionNumber: true,
+    deltaMin: -10,
+    deltaMax: 30,
+    casePrompt:
+      'DIFFICULTY — HARD. The suspect is a disciplined, practiced liar. Evidence must be oblique — each item requires an inference to connect to its contradiction. The timeline is tight and minute-level: the suspect looks accounted for except one NARROW window, and the secret fits inside it. Evidence timestamps only incriminate when checked against the timeline. Include exactly one detail in the evidence or timeline that LOOKS incriminating but has an innocent explanation (a red herring). breaking_point must be narrow and exact.',
+    turnPrompt:
+      'YOUR DISCIPLINE AS A LIAR: excellent. You answer only what is asked, concede nothing without proof, and calmly offer innocent explanations for incriminating details. Only your exact breaking point cracks you — pressure, repetition, and partial evidence never do. Your tells are faint and ambiguous, easy to misread.',
+    accusePrompt:
+      'Grade on substance but require both the right act AND the right motive; one without the other misses.',
+  },
+  {
+    name: 'Hardboiled',
+    tagline: 'Evidence that only speaks in pairs — and a false confession waiting. Eight questions.',
+    questions: 8,
+    wrongAccusePenalty: 40,
+    showTells: true,
+    showSuspicionNumber: true,
+    deltaMin: -5,
+    deltaMax: 35,
+    casePrompt:
+      'DIFFICULTY — VERY HARD. The suspect is a hardened, disciplined liar. Evidence must be highly oblique — each item meaningful only when combined with another. The timeline is dense and minute-by-minute, and on first read it fully accounts for the suspect; the true window only appears when two evidence timestamps are cross-referenced against it. Include one red herring that LOOKS incriminating but has an innocent explanation, and make the incident plausibly support a SECOND, wrong theory of what happened. breaking_point must be narrow and exact — a specific name plus a specific piece of evidence.',
+    turnPrompt:
+      'YOUR DISCIPLINE AS A LIAR: exceptional. You answer only what is asked and give misleading but technically true answers. If cornered, "reluctantly" confess to a smaller embarrassing decoy — something plausible within the incident that is NOT your secret — to make the investigator believe they have won. Only your exact breaking point cracks you. Your tells are faint, and sometimes deliberately performed to mislead.',
+    accusePrompt:
+      'Grade strictly: require the right act, the right motive, and roughly how it was done. A decoy or partial theory misses.',
+  },
+  {
+    name: 'Cold Case',
+    tagline: 'They have told this lie for years and believe it. Six questions. No tells. No meter.',
+    questions: 6,
+    wrongAccusePenalty: 50,
+    showTells: false,
+    showSuspicionNumber: false,
+    deltaMin: -5,
+    deltaMax: 40,
+    casePrompt:
+      'DIFFICULTY — BRUTAL. The suspect has lived inside this lie so long it feels true. Evidence must be highly oblique — meaningful only when two items are combined against the timeline. The timeline must read as AIRTIGHT: minute-by-minute, the suspect apparently accounted for the entire incident, with the real window hidden inside an entry that sounds innocent. It must also contain one innocent-looking inconsistency that leads nowhere, and the incident must strongly support a SECOND, wrong theory of what happened that the evidence superficially favors. breaking_point must be a single precise combination of a name and a piece of evidence.',
+    turnPrompt:
+      'YOUR DISCIPLINE AS A LIAR: total. You have rehearsed this interview in your head for years. Give misleading but technically true answers, and actively steer the investigator toward a wrong theory of the incident. If cornered, "reluctantly" confess to a smaller embarrassing decoy that is NOT your secret. Only your exact breaking point, stated precisely with its evidence, cracks you — never accusation, sympathy, or persistence. You have no visible tells; describe composure only. Sympathetic questions barely lower suspicion; you distrust warmth.',
+    accusePrompt:
+      'Grade strictly: the accusation must name the right act, the right motive, and how it was done. Anything less — a decoy, a partial theory, the wrong mechanism — misses.',
+  },
+] as const;
+
+export const DifficultySchema = z.number().int().min(0).max(4).catch(1);
+
 export function validateCase(c: Case): boolean {
   if (!c.suspect.secret.trim()) return false;
   if (c.suspect.contradictions.length !== 3) return false;

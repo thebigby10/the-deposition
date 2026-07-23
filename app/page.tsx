@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { PRESET_CASE, type Case, type Turn } from '@/lib/game';
+import { DIFFICULTIES, PRESET_CASE, type Case, type Turn } from '@/lib/game';
 
 const Portrait = dynamic(() => import('@/components/Portrait'), { ssr: false });
 
 const SILHOUETTE = '/silhouette.svg';
-const MAX_QUESTIONS = 12;
 const REVEAL_STEPS = 7; // name, role, incident, evidence x3, portrait
 
 type Screen = 'select' | 'generating' | 'interrogation' | 'verdict';
@@ -35,7 +34,7 @@ const EXAMPLE_CHIPS = [
 
 const TUTORIAL_STEPS = [
   { n: '01', title: 'Open the file', line: 'Pick the preset case or write your own suspect.' },
-  { n: '02', title: 'Interrogate', line: 'Twelve questions. Press the evidence in the dossier.' },
+  { n: '02', title: 'Interrogate', line: 'Limited questions. Press the evidence in the dossier.' },
   { n: '03', title: 'Watch the meter', line: 'Suspicion climbs cooperative → guarded → hostile.' },
   { n: '04', title: 'Break them', line: 'Corner them into a confession — or make the accusation.' },
 ];
@@ -54,7 +53,8 @@ export default function Home() {
   const [portraitUrl, setPortraitUrl] = useState<string | null>(null);
   const [history, setHistory] = useState<Msg[]>([]);
   const [suspicion, setSuspicion] = useState(0);
-  const [questionsLeft, setQuestionsLeft] = useState(MAX_QUESTIONS);
+  const [difficulty, setDifficulty] = useState(1);
+  const [questionsLeft, setQuestionsLeft] = useState<number>(DIFFICULTIES[1].questions);
   const [facts, setFacts] = useState<string[]>([]);
   const [ending, setEnding] = useState<Ending>(null);
   const [input, setInput] = useState('');
@@ -71,6 +71,7 @@ export default function Home() {
   const [apiKey, setApiKey] = useState('');
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const diff = DIFFICULTIES[difficulty];
 
   useEffect(() => {
     setApiKey(localStorage.getItem('gemini_api_key') ?? '');
@@ -114,7 +115,7 @@ export default function Home() {
     setKase(null);
     setPortraitUrl(null);
     setSuspicion(0);
-    setQuestionsLeft(MAX_QUESTIONS);
+    setQuestionsLeft(diff.questions);
     setFacts([]);
     setEnding(null);
     setHistory([]);
@@ -127,7 +128,7 @@ export default function Home() {
         const res = await fetch('/api/generate-case', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description: premise, apiKey }),
+          body: JSON.stringify({ description: premise, apiKey, difficulty }),
         });
         if (res.ok) c = await res.json();
       } catch {
@@ -196,6 +197,7 @@ export default function Home() {
           facts,
           question: q,
           apiKey,
+          difficulty,
         }),
       });
       if (!res.ok) throw new Error();
@@ -236,7 +238,7 @@ export default function Home() {
       const res = await fetch('/api/accuse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: kase.suspect.secret, accusation: a, apiKey }),
+        body: JSON.stringify({ secret: kase.suspect.secret, accusation: a, apiKey, difficulty }),
       });
       if (!res.ok) throw new Error();
       const { correct, verdict } = await res.json();
@@ -245,7 +247,7 @@ export default function Home() {
         end('accused_right', verdict);
       } else {
         setPulseKey((k) => k + 1);
-        const next = Math.min(100, suspicion + 30);
+        const next = Math.min(100, suspicion + diff.wrongAccusePenalty);
         setSuspicion(next);
         if (next >= 100) end('lawyered');
       }
@@ -262,7 +264,7 @@ export default function Home() {
 
   if (screen === 'select') {
     return (
-      <main className="min-h-screen bg-neutral-950 text-neutral-200 flex flex-col items-center justify-center gap-10 p-8">
+      <main className="min-h-screen bg-neutral-950 text-neutral-200 flex items-center justify-center p-8">
         {showTutorial && (
           <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6">
             <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden shadow-2xl">
@@ -350,62 +352,110 @@ export default function Home() {
             </div>
           </div>
         )}
-        <div className="text-center relative">
-          <h1 className="text-5xl font-bold tracking-widest text-neutral-100">THE DEPOSITION</h1>
-          <p className="mt-3 text-neutral-400">One suspect. One secret. Twelve questions.</p>
-          <button
-            onClick={() => setShowTutorial(true)}
-            title="How to play"
-            className="absolute -top-1 -right-8 w-7 h-7 rounded-full border border-neutral-700 text-neutral-400 hover:border-amber-600 hover:text-amber-500 transition text-sm"
-          >
-            ?
-          </button>
-        </div>
-        <button
-          onClick={() => startCase(true)}
-          className="w-full max-w-xl text-left border border-neutral-700 rounded-lg p-5 hover:border-amber-600 hover:bg-neutral-900 transition"
-        >
-          <div className="text-xs uppercase tracking-widest text-amber-600">Case File · Preset</div>
-          <div className="mt-1 text-xl font-semibold">{PRESET_CASE.scenario.title}</div>
-          <div className="mt-1 text-sm text-neutral-400">{PRESET_CASE.scenario.incident}</div>
-        </button>
-        <div className="w-full max-w-xl">
-          <div className="text-xs uppercase tracking-widest text-neutral-500 mb-2">Or open a new case</div>
-          <textarea
-            value={premise}
-            onChange={(e) => setPremise(e.target.value.slice(0, 200))}
-            placeholder="Describe a suspect, or describe an incident."
-            rows={2}
-            className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-3 text-sm outline-none focus:border-amber-600 resize-none"
-          />
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            {EXAMPLE_CHIPS.map((c) => (
+        <div className="w-full max-w-6xl grid gap-8 md:grid-cols-[minmax(0,1fr)_380px] items-stretch">
+          {/* left: case selection */}
+          <div className="flex flex-col gap-8">
+            <div className="relative self-start">
+              <h1 className="text-5xl font-bold tracking-widest text-neutral-100">THE DEPOSITION</h1>
+              <p className="mt-3 text-neutral-400">One suspect. One secret. {diff.questions} questions.</p>
               <button
-                key={c}
-                onClick={() => setPremise(c)}
-                title={c}
-                className="text-xs text-left truncate border border-neutral-700 rounded-full px-3 py-1 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200 transition"
+                onClick={() => setShowTutorial(true)}
+                title="How to play"
+                className="absolute -top-1 -right-8 w-7 h-7 rounded-full border border-neutral-700 text-neutral-400 hover:border-amber-600 hover:text-amber-500 transition text-sm"
               >
-                {c}
+                ?
               </button>
-            ))}
-          </div>
-          <div className="mt-3 flex gap-2">
+            </div>
             <button
-              onClick={enhance}
-              disabled={!premise.trim() || enhancing}
-              className="px-4 border border-neutral-700 rounded-lg py-2.5 text-sm text-neutral-300 hover:border-amber-600 disabled:opacity-40 transition"
+              onClick={() => startCase(true)}
+              className="w-full text-left border border-neutral-700 rounded-lg p-5 hover:border-amber-600 hover:bg-neutral-900 transition"
             >
-              {enhancing ? 'Enhancing…' : 'Enhance'}
+              <div className="text-xs uppercase tracking-widest text-amber-600">Case File · Preset</div>
+              <div className="mt-1 text-xl font-semibold">{PRESET_CASE.scenario.title}</div>
+              <div className="mt-1 text-sm text-neutral-400">{PRESET_CASE.scenario.incident}</div>
             </button>
-            <button
-              onClick={() => premise.trim() && startCase(false)}
-              disabled={!premise.trim() || enhancing}
-              className="flex-1 bg-amber-700 hover:bg-amber-600 disabled:opacity-40 disabled:hover:bg-amber-700 rounded-lg py-2.5 font-semibold tracking-wide transition"
-            >
-              GENERATE CASE
-            </button>
+            <div>
+              <div className="text-xs uppercase tracking-widest text-neutral-500 mb-2">Or open a new case</div>
+              <textarea
+                value={premise}
+                onChange={(e) => setPremise(e.target.value.slice(0, 200))}
+                placeholder="Describe a suspect, or describe an incident."
+                rows={2}
+                className="w-full bg-neutral-900 border border-neutral-700 rounded-lg p-3 text-sm outline-none focus:border-amber-600 resize-none"
+              />
+              <div className="grid grid-cols-2 gap-2 mt-2">
+                {EXAMPLE_CHIPS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setPremise(c)}
+                    title={c}
+                    className="text-xs text-left truncate border border-neutral-700 rounded-full px-3 py-1 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200 transition"
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={enhance}
+                  disabled={!premise.trim() || enhancing}
+                  className="px-4 border border-neutral-700 rounded-lg py-2.5 text-sm text-neutral-300 hover:border-amber-600 disabled:opacity-40 transition"
+                >
+                  {enhancing ? 'Enhancing…' : 'Enhance'}
+                </button>
+                <button
+                  onClick={() => premise.trim() && startCase(false)}
+                  disabled={!premise.trim() || enhancing}
+                  className="flex-1 bg-amber-700 hover:bg-amber-600 disabled:opacity-40 disabled:hover:bg-amber-700 rounded-lg py-2.5 font-semibold tracking-wide transition"
+                >
+                  GENERATE CASE
+                </button>
+              </div>
+            </div>
           </div>
+
+          {/* right: difficulty */}
+          <aside className="flex flex-col border border-neutral-800 rounded-lg p-6">
+            <div className="text-xs uppercase tracking-widest text-neutral-500">Assignment Grade</div>
+            <div className="mt-3 rounded border border-neutral-700 bg-neutral-900 overflow-hidden">
+              <div
+                key={difficulty}
+                className="reel px-4 py-3.5 text-center font-mono text-2xl uppercase tracking-[0.25em] text-amber-500 whitespace-nowrap"
+              >
+                {diff.name}
+              </div>
+            </div>
+            <div className="mt-6 flex flex-1 justify-center gap-8">
+              <input
+                type="range"
+                min={0}
+                max={4}
+                step={1}
+                value={difficulty}
+                onChange={(e) => setDifficulty(Number(e.target.value))}
+                aria-label="Difficulty"
+                style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
+                className="h-56 accent-amber-600 cursor-pointer"
+              />
+              <div className="flex h-56 flex-col-reverse justify-between">
+                {DIFFICULTIES.map((d, i) => (
+                  <button
+                    key={d.name}
+                    onClick={() => setDifficulty(i)}
+                    className={`flex items-center gap-3 text-xs font-mono uppercase tracking-widest transition ${
+                      i === difficulty ? 'text-amber-500' : 'text-neutral-600 hover:text-neutral-400'
+                    }`}
+                  >
+                    <span className={`h-px w-4 ${i === difficulty ? 'bg-amber-500' : 'bg-neutral-700'}`} />
+                    {d.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <p className="mt-6 min-h-[3.5rem] text-sm text-neutral-500 italic border-l-2 border-amber-700/50 pl-3">
+              {diff.tagline}
+            </p>
+          </aside>
         </div>
       </main>
     );
@@ -502,7 +552,8 @@ export default function Home() {
               </ul>
             </div>
             <p className="text-neutral-500">
-              Questions used: {MAX_QUESTIONS - questionsLeft} of {MAX_QUESTIONS} · Final suspicion: {suspicion}/100
+              Grade: {diff.name} · Questions used: {diff.questions - questionsLeft} of {diff.questions} · Final
+              suspicion: {suspicion}/100
             </p>
           </div>
           <button
@@ -562,7 +613,7 @@ export default function Home() {
           <div className="rounded-lg overflow-hidden border border-neutral-800">
             <Portrait src={portraitUrl ?? SILHOUETTE} suspicion={suspicion} pulseKey={pulseKey} />
           </div>
-          <p className="h-6 mt-2 text-sm italic text-neutral-500 text-center">{lastTell ?? ''}</p>
+          <p className="h-6 mt-2 text-sm italic text-neutral-500 text-center">{diff.showTells ? lastTell ?? '' : ''}</p>
           <div className="text-sm text-neutral-400 font-semibold">
             {kase.suspect.name} · <span className="text-neutral-600 font-normal">{kase.suspect.role}</span>
           </div>
@@ -597,7 +648,11 @@ export default function Home() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && (accuseMode ? accuse() : ask())}
             disabled={busy || !!ending}
-            placeholder={accuseMode ? 'State what you think happened. Wrong costs +30 suspicion.' : 'Ask your question…'}
+            placeholder={
+              accuseMode
+                ? `State what you think happened. Wrong costs +${diff.wrongAccusePenalty} suspicion.`
+                : 'Ask your question…'
+            }
             className={`flex-1 bg-neutral-900 border rounded-lg px-3 py-2.5 text-sm outline-none transition ${
               accuseMode ? 'border-red-700 focus:border-red-500' : 'border-neutral-700 focus:border-amber-600'
             }`}
@@ -630,11 +685,15 @@ export default function Home() {
         <div>
           <div className="flex justify-between text-xs uppercase tracking-widest text-neutral-500">
             <span>Suspicion</span>
-            <span>{suspicion}/100</span>
+            {diff.showSuspicionNumber && <span>{suspicion}/100</span>}
           </div>
-          <div className="mt-1 h-2.5 bg-neutral-800 rounded-full overflow-hidden">
-            <div className={`h-full ${sColor} transition-all duration-700`} style={{ width: `${suspicion}%` }} />
-          </div>
+          {diff.showSuspicionNumber ? (
+            <div className="mt-1 h-2.5 bg-neutral-800 rounded-full overflow-hidden">
+              <div className={`h-full ${sColor} transition-all duration-700`} style={{ width: `${suspicion}%` }} />
+            </div>
+          ) : (
+            <p className="mt-1 text-xs text-neutral-600 italic">The meter stays in your gut on a cold case.</p>
+          )}
           <div className="mt-1 text-xs text-neutral-600">
             {suspicion >= 70 ? 'Hostile' : suspicion >= 30 ? 'Guarded' : 'Cooperative'}
           </div>

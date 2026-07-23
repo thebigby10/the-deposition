@@ -24,3 +24,22 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* old-timey reel: the grade title rolls up into place */
+@keyframes reel {
+  from {
+    transform: translateY(110%);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(-8%);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.reel {
+  animation: reel 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
