@@ -1,5 +1,5 @@
 import { generateObject } from 'ai';
-import { CaseSchema, TEXT_MODEL_FAST, TurnSchema } from '@/lib/game';
+import { CaseSchema, pickModel, TurnSchema } from '@/lib/game';
 import { z } from 'zod';
 
 export const maxDuration = 60;
@@ -10,6 +10,7 @@ const BodySchema = z.object({
   suspicion: z.number(),
   facts: z.array(z.string()),
   question: z.string().min(1).max(500),
+  apiKey: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -80,7 +81,7 @@ REMINDER: you are hiding this: ${s.secret}. Do not reveal it unless
 your breaking point (${s.breaking_point}) is reached.`;
 
   const { object } = await generateObject({
-    model: TEXT_MODEL_FAST,
+    model: pickModel(parsed.data.apiKey),
     schema: TurnSchema,
     prompt,
   });

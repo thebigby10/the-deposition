@@ -1,12 +1,22 @@
-import { google } from '@ai-sdk/google';
+import { google, createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 
 // ponytail: flash-lite, not gemini-3.5-flash — 3.5-flash free tier is 20 req/day/model,
 // one game (1 case + up to 12 turns) burns most of it, then every call 429s and the app
 // silently degrades to PRESET_CASE + SHRUG_LINES. flash-lite has its own, far larger
 // free bucket. Pro models still have 0 free quota on this key. Bump once billing's on.
-export const TEXT_MODEL_FAST = google(process.env.TEXT_MODEL_FAST ?? 'gemini-3.1-flash-lite');
-export const TEXT_MODEL_PRO = google(process.env.TEXT_MODEL_PRO ?? 'gemini-3.1-flash-lite');
+const FAST_ID = process.env.TEXT_MODEL_FAST ?? 'gemini-3.1-flash-lite';
+const PRO_ID = process.env.TEXT_MODEL_PRO ?? 'gemini-3.1-flash-lite';
+export const TEXT_MODEL_FAST = google(FAST_ID);
+export const TEXT_MODEL_PRO = google(PRO_ID);
+
+// A player can bring their own Gemini key to dodge the shared free-tier quota.
+// Given one, build a provider bound to it; otherwise use the server's default.
+export function pickModel(apiKey?: string, pro = false) {
+  const id = pro ? PRO_ID : FAST_ID;
+  if (apiKey && apiKey.trim()) return createGoogleGenerativeAI({ apiKey: apiKey.trim() })(id);
+  return pro ? TEXT_MODEL_PRO : TEXT_MODEL_FAST;
+}
 
 export const EvidenceSchema = z.object({
   item: z.string(),

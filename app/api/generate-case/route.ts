@@ -1,5 +1,5 @@
 import { generateObject } from 'ai';
-import { CaseSchema, PRESET_CASE, TEXT_MODEL_PRO, validateCase } from '@/lib/game';
+import { CaseSchema, PRESET_CASE, pickModel, validateCase } from '@/lib/game';
 
 export const maxDuration = 60;
 
@@ -54,11 +54,12 @@ export async function POST(req: Request) {
     .replace(/[\r\n]+/g, ' ')
     .slice(0, 200);
   const prompt = CASE_PROMPT.replace('{description}', premise || 'an interrogation worth playing');
+  const model = pickModel(body.apiKey, true);
 
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const { object } = await generateObject({
-        model: TEXT_MODEL_PRO,
+        model,
         schema: CaseSchema,
         prompt,
       });

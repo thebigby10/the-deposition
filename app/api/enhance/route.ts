@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { TEXT_MODEL_FAST } from '@/lib/game';
+import { pickModel } from '@/lib/game';
 
 export const maxDuration = 30;
 
@@ -12,7 +12,7 @@ export async function POST(req: Request) {
   if (!premise) return Response.json({ error: 'bad request' }, { status: 400 });
 
   const { text } = await generateText({
-    model: TEXT_MODEL_FAST,
+    model: pickModel(body.apiKey),
     prompt: `Rewrite this premise for an interrogation game into ONE vivid, specific
 sentence: a suspect or incident with a concrete hook — a place, a time,
 an object, a relationship. Keep the user's core idea; sharpen it, don't

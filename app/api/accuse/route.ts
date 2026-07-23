@@ -1,13 +1,13 @@
 import { generateObject } from 'ai';
-import { TEXT_MODEL_FAST } from '@/lib/game';
+import { pickModel } from '@/lib/game';
 import { z } from 'zod';
 
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { secret = '', accusation = '' } = await req.json().catch(() => ({}));
+  const { secret = '', accusation = '', apiKey } = await req.json().catch(() => ({}));
   const { object } = await generateObject({
-    model: TEXT_MODEL_FAST,
+    model: pickModel(apiKey),
     schema: z.object({ correct: z.boolean(), verdict: z.string() }),
     prompt: `An investigator has made a formal accusation. Grade it against the truth.
 

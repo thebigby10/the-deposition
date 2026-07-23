@@ -33,6 +33,13 @@ const EXAMPLE_CHIPS = [
   'A wedding planner whose groom vanished between the rehearsal dinner and the ceremony',
 ];
 
+const TUTORIAL_STEPS = [
+  { n: '01', title: 'Open the file', line: 'Pick the preset case or write your own suspect.' },
+  { n: '02', title: 'Interrogate', line: 'Twelve questions. Press the evidence in the dossier.' },
+  { n: '03', title: 'Watch the meter', line: 'Suspicion climbs cooperative → guarded → hostile.' },
+  { n: '04', title: 'Break them', line: 'Corner them into a confession — or make the accusation.' },
+];
+
 const RANKS: Record<string, { rank: string; blurb: string }> = {
   accused_right: { rank: 'Commendation', blurb: 'You named it before they broke. Clean work.' },
   cracked: { rank: 'Case Closed', blurb: 'You found the seam and pressed until it gave.' },
@@ -59,8 +66,24 @@ export default function Home() {
   const [revealStep, setRevealStep] = useState(0);
   const [peek, setPeek] = useState(false);
   const [finalVerdict, setFinalVerdict] = useState('');
+  const [showTutorial, setShowTutorial] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiKey, setApiKey] = useState('');
   const logRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setApiKey(localStorage.getItem('gemini_api_key') ?? '');
+  }, []);
+
+  function saveKey(k: string) {
+    setApiKey(k);
+    localStorage.setItem('gemini_api_key', k);
+  }
+
+  function closeTutorial() {
+    setShowTutorial(false);
+  }
 
   useEffect(() => {
     logRef.current?.scrollTo({ top: logRef.current.scrollHeight, behavior: 'smooth' });
@@ -104,7 +127,7 @@ export default function Home() {
         const res = await fetch('/api/generate-case', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ description: premise }),
+          body: JSON.stringify({ description: premise, apiKey }),
         });
         if (res.ok) c = await res.json();
       } catch {
@@ -132,7 +155,7 @@ export default function Home() {
       const res = await fetch('/api/enhance', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: premise }),
+        body: JSON.stringify({ description: premise, apiKey }),
       });
       const d = res.ok ? await res.json() : null;
       if (d?.description) setPremise(String(d.description).slice(0, 200));
@@ -172,6 +195,7 @@ export default function Home() {
           suspicion,
           facts,
           question: q,
+          apiKey,
         }),
       });
       if (!res.ok) throw new Error();
@@ -212,7 +236,7 @@ export default function Home() {
       const res = await fetch('/api/accuse', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secret: kase.suspect.secret, accusation: a }),
+        body: JSON.stringify({ secret: kase.suspect.secret, accusation: a, apiKey }),
       });
       if (!res.ok) throw new Error();
       const { correct, verdict } = await res.json();
@@ -239,9 +263,103 @@ export default function Home() {
   if (screen === 'select') {
     return (
       <main className="min-h-screen bg-neutral-950 text-neutral-200 flex flex-col items-center justify-center gap-10 p-8">
-        <div className="text-center">
+        {showTutorial && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6">
+            <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden shadow-2xl">
+              <div className="h-1 bg-amber-600" />
+              <div className="p-6">
+                <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
+                  <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-amber-600">
+                    {showSettings ? 'Bring Your Own Key' : 'Field Briefing'}
+                  </span>
+                  <button
+                    onClick={() => setShowSettings((v) => !v)}
+                    title="Use your own Gemini API key"
+                    aria-label="Settings"
+                    className={`w-7 h-7 flex items-center justify-center rounded border transition ${
+                      showSettings
+                        ? 'border-amber-600 text-amber-500'
+                        : 'border-neutral-700 text-neutral-500 hover:border-amber-600 hover:text-amber-500'
+                    }`}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                  </button>
+                </div>
+
+                {showSettings ? (
+                  <div className="py-4">
+                    <p className="text-sm text-neutral-400">
+                      Skip the shared free-tier quota — run the game on your own Gemini
+                      key. It&apos;s stored only in this browser and sent straight to Google.
+                    </p>
+                    <input
+                      type="password"
+                      value={apiKey}
+                      onChange={(e) => saveKey(e.target.value)}
+                      placeholder="Paste your Gemini API key"
+                      className="mt-3 w-full bg-neutral-950 border border-neutral-700 rounded px-3 py-2 text-sm font-mono text-neutral-100 focus:border-amber-600 focus:outline-none"
+                    />
+                    <div className="mt-2 flex items-center justify-between text-[11px]">
+                      <span className={apiKey.trim() ? 'text-amber-500' : 'text-neutral-600'}>
+                        {apiKey.trim() ? '● Using your key' : '○ Using the shared default'}
+                      </span>
+                      {apiKey.trim() && (
+                        <button onClick={() => saveKey('')} className="text-neutral-500 hover:text-neutral-300">
+                          clear
+                        </button>
+                      )}
+                    </div>
+                    <ol className="mt-4 space-y-1.5 text-sm text-neutral-400 list-decimal list-inside marker:text-amber-600 marker:font-mono">
+                      <li>
+                        Open <span className="text-neutral-200">aistudio.google.com/apikey</span>
+                      </li>
+                      <li>Sign in with your Google account</li>
+                      <li>
+                        Click <span className="text-neutral-200">Create API key</span>
+                      </li>
+                      <li>Copy it and paste it above</li>
+                    </ol>
+                  </div>
+                ) : (
+                  <ol className="divide-y divide-neutral-800">
+                    {TUTORIAL_STEPS.map((step) => (
+                      <li key={step.n} className="flex items-center gap-4 py-4">
+                        <span className="shrink-0 w-9 h-9 flex items-center justify-center rounded border border-amber-700/40 font-mono text-sm text-amber-600">
+                          {step.n}
+                        </span>
+                        <div>
+                          <div className="text-sm font-semibold uppercase tracking-wide text-neutral-100">
+                            {step.title}
+                          </div>
+                          <div className="text-sm text-neutral-400">{step.line}</div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+                <button
+                  onClick={showSettings ? () => setShowSettings(false) : closeTutorial}
+                  className="mt-2 w-full bg-amber-700 hover:bg-amber-600 rounded py-2.5 font-semibold uppercase tracking-widest text-sm transition"
+                >
+                  {showSettings ? 'Done' : 'Begin'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        <div className="text-center relative">
           <h1 className="text-5xl font-bold tracking-widest text-neutral-100">THE DEPOSITION</h1>
           <p className="mt-3 text-neutral-400">One suspect. One secret. Twelve questions.</p>
+          <button
+            onClick={() => setShowTutorial(true)}
+            title="How to play"
+            className="absolute -top-1 -right-8 w-7 h-7 rounded-full border border-neutral-700 text-neutral-400 hover:border-amber-600 hover:text-amber-500 transition text-sm"
+          >
+            ?
+          </button>
         </div>
         <button
           onClick={() => startCase(true)}
@@ -388,7 +506,10 @@ export default function Home() {
             </p>
           </div>
           <button
-            onClick={() => setScreen('select')}
+            onClick={() => {
+              setScreen('select');
+              setShowTutorial(true);
+            }}
             className="mt-8 bg-amber-700 hover:bg-amber-600 rounded-lg px-8 py-2.5 font-semibold tracking-wide transition"
           >
             NEW CASE
