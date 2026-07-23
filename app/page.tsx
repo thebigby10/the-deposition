@@ -264,10 +264,10 @@ export default function Home() {
 
   if (screen === 'select') {
     return (
-      <main className="min-h-screen bg-neutral-950 text-neutral-200 flex items-center justify-center p-8">
+      <main className="min-h-screen bg-neutral-950 text-neutral-200 flex items-center justify-center p-4 py-10 sm:p-8">
         {showTutorial && (
           <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-6">
-            <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-lg overflow-hidden shadow-2xl">
+            <div className="w-full max-w-md max-h-[90dvh] overflow-y-auto bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl">
               <div className="h-1 bg-amber-600" />
               <div className="p-6">
                 <div className="flex items-center justify-between border-b border-neutral-800 pb-3">
@@ -356,7 +356,7 @@ export default function Home() {
           {/* left: case selection */}
           <div className="flex flex-col gap-8">
             <div className="relative self-start">
-              <h1 className="text-5xl font-bold tracking-widest text-neutral-100">THE DEPOSITION</h1>
+              <h1 className="text-3xl sm:text-5xl font-bold tracking-widest text-neutral-100">THE DEPOSITION</h1>
               <p className="mt-3 text-neutral-400">One suspect. One secret. {diff.questions} questions.</p>
               <button
                 onClick={() => setShowTutorial(true)}
@@ -424,7 +424,7 @@ export default function Home() {
             <div className="mt-3 rounded border border-neutral-700 bg-neutral-900 overflow-hidden">
               <div
                 key={difficulty}
-                className="reel px-4 py-3.5 text-center font-mono text-2xl uppercase tracking-[0.25em] text-amber-500 whitespace-nowrap"
+                className="reel px-4 py-3.5 text-center font-mono text-xl uppercase tracking-[0.15em] text-amber-500 whitespace-nowrap"
               >
                 {diff.name}
               </div>
@@ -482,7 +482,7 @@ export default function Home() {
           ['Evidence 3', undefined],
         ];
     return (
-      <main className="min-h-screen bg-neutral-950 text-neutral-200 flex items-center justify-center p-8">
+      <main className="min-h-screen bg-neutral-950 text-neutral-200 flex items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-2xl">
           <div className="text-xs uppercase tracking-widest text-amber-600 animate-pulse">Compiling dossier…</div>
           <div className="mt-4 border border-neutral-800 rounded-lg divide-y divide-neutral-800">
@@ -530,10 +530,10 @@ export default function Home() {
     const r = RANKS[ending ?? 'out_of_time'];
     const won = ending === 'cracked' || ending === 'accused_right';
     return (
-      <main className="min-h-screen bg-neutral-950 text-neutral-200 flex items-center justify-center p-8">
+      <main className="min-h-screen bg-neutral-950 text-neutral-200 flex items-center justify-center p-4 sm:p-8">
         <div className="w-full max-w-2xl text-center">
           <div className={`text-xs uppercase tracking-widest ${won ? 'text-emerald-500' : 'text-red-500'}`}>Verdict</div>
-          <h2 className="mt-2 text-4xl font-bold tracking-widest">{r.rank}</h2>
+          <h2 className="mt-2 text-3xl sm:text-4xl font-bold tracking-widest">{r.rank}</h2>
           <p className="mt-2 text-neutral-400">{r.blurb}</p>
           {finalVerdict && <p className="mt-2 text-sm text-neutral-500 italic">{finalVerdict}</p>}
           <div className="mt-8 border border-neutral-800 rounded-lg p-5 text-left space-y-3 text-sm">
@@ -577,44 +577,88 @@ export default function Home() {
   if (!kase) return null;
 
   const sColor = suspicion >= 70 ? 'bg-red-600' : suspicion >= 30 ? 'bg-amber-500' : 'bg-emerald-600';
+  const band = suspicion >= 70 ? 'Hostile' : suspicion >= 30 ? 'Guarded' : 'Cooperative';
+
+  const dossier = (
+    <div className="space-y-4 text-sm">
+      <div>
+        <div className="text-xs uppercase tracking-widest text-amber-600">{kase.scenario.title}</div>
+        <p className="mt-1 text-neutral-400">{kase.scenario.incident}</p>
+      </div>
+      <div>
+        <div className="text-xs uppercase tracking-widest text-neutral-500">Timeline</div>
+        <p className="mt-1 text-neutral-400 text-xs leading-5">{kase.scenario.timeline}</p>
+      </div>
+      <div>
+        <div className="text-xs uppercase tracking-widest text-neutral-500">Evidence — click to cite</div>
+        <div className="mt-1 space-y-2">
+          {kase.scenario.evidence.map((e) => (
+            <button
+              key={e.item}
+              onClick={() => {
+                setInput(`About the ${e.item.toLowerCase()} — `);
+                inputRef.current?.focus();
+              }}
+              className="w-full text-left border border-neutral-800 rounded p-2 hover:border-amber-700 transition"
+            >
+              <div className="font-semibold text-neutral-300">{e.item}</div>
+              <div className="text-xs text-neutral-500 mt-0.5">{e.detail}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="text-xs text-neutral-600">{kase.scenario.stakes}</p>
+    </div>
+  );
+
+  const factsList =
+    facts.length === 0 ? (
+      <p className="mt-1 text-xs text-neutral-600">Nothing yet. Press the evidence.</p>
+    ) : (
+      <ul className="mt-1 space-y-1.5">
+        {facts.map((f, i) => (
+          <li key={i} className="text-xs text-neutral-400 border-l-2 border-amber-700 pl-2">
+            {f}
+          </li>
+        ))}
+      </ul>
+    );
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-200 p-4 grid grid-cols-[280px_1fr_260px] gap-4 max-w-7xl mx-auto">
-      {/* left: case file */}
-      <aside className="border border-neutral-800 rounded-lg p-4 space-y-4 text-sm overflow-y-auto max-h-[calc(100vh-2rem)]">
-        <div>
-          <div className="text-xs uppercase tracking-widest text-amber-600">{kase.scenario.title}</div>
-          <p className="mt-1 text-neutral-400">{kase.scenario.incident}</p>
-        </div>
-        <div>
-          <div className="text-xs uppercase tracking-widest text-neutral-500">Timeline</div>
-          <p className="mt-1 text-neutral-400 text-xs leading-5">{kase.scenario.timeline}</p>
-        </div>
-        <div>
-          <div className="text-xs uppercase tracking-widest text-neutral-500">Evidence — click to cite</div>
-          <div className="mt-1 space-y-2">
-            {kase.scenario.evidence.map((e) => (
-              <button
-                key={e.item}
-                onClick={() => {
-                  setInput(`About the ${e.item.toLowerCase()} — `);
-                  inputRef.current?.focus();
-                }}
-                className="w-full text-left border border-neutral-800 rounded p-2 hover:border-amber-700 transition"
-              >
-                <div className="font-semibold text-neutral-300">{e.item}</div>
-                <div className="text-xs text-neutral-500 mt-0.5">{e.detail}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-        <p className="text-xs text-neutral-600">{kase.scenario.stakes}</p>
+    <main className="min-h-screen bg-neutral-950 text-neutral-200 p-3 sm:p-4 max-w-7xl mx-auto flex flex-col gap-3 lg:grid lg:grid-cols-[280px_1fr_260px] lg:gap-4">
+      {/* mobile: compact status strip */}
+      <div className="lg:hidden flex items-center gap-3 border border-neutral-800 rounded-lg px-3 py-2">
+        <span className="text-[10px] uppercase tracking-widest text-neutral-500">Questions</span>
+        <span className="text-base font-bold">{questionsLeft}</span>
+        {diff.showSuspicionNumber ? (
+          <>
+            <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+              <div className={`h-full ${sColor} transition-all duration-700`} style={{ width: `${suspicion}%` }} />
+            </div>
+            <span className="text-xs text-neutral-500">{suspicion}</span>
+          </>
+        ) : (
+          <span className="flex-1 text-right text-xs text-neutral-600">{band}</span>
+        )}
+      </div>
+
+      {/* mobile: collapsible case file */}
+      <details className="lg:hidden border border-neutral-800 rounded-lg">
+        <summary className="p-3 text-xs uppercase tracking-widest text-amber-600 cursor-pointer select-none">
+          Case file &amp; evidence
+        </summary>
+        <div className="p-4 pt-1">{dossier}</div>
+      </details>
+
+      {/* left: case file (desktop) */}
+      <aside className="hidden lg:block border border-neutral-800 rounded-lg p-4 overflow-y-auto max-h-[calc(100vh-2rem)]">
+        {dossier}
       </aside>
 
       {/* centre: portrait + conversation */}
-      <section className="flex flex-col max-h-[calc(100vh-2rem)]">
+      <section className="flex flex-col lg:max-h-[calc(100vh-2rem)]">
         <div className="flex flex-col items-center">
-          <div className="rounded-lg overflow-hidden border border-neutral-800">
+          <div className="w-40 sm:w-52 lg:w-[360px] rounded-lg overflow-hidden border border-neutral-800">
             <Portrait src={portraitUrl ?? SILHOUETTE} suspicion={suspicion} pulseKey={pulseKey} />
           </div>
           <p className="h-6 mt-2 text-sm italic text-neutral-500 text-center">{diff.showTells ? lastTell ?? '' : ''}</p>
@@ -622,7 +666,7 @@ export default function Home() {
             {kase.suspect.name} · <span className="text-neutral-600 font-normal">{kase.suspect.role}</span>
           </div>
         </div>
-        <div ref={logRef} className="flex-1 overflow-y-auto mt-3 space-y-3 pr-1">
+        <div ref={logRef} className="h-[40dvh] lg:h-auto lg:flex-1 overflow-y-auto mt-3 space-y-3 pr-1">
           {history.map((m, i) =>
             m.role === 'system' ? (
               <p key={i} className="text-center text-xs uppercase tracking-widest text-red-400">
@@ -680,8 +724,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* right: state panel */}
-      <aside className="border border-neutral-800 rounded-lg p-4 space-y-5 text-sm max-h-[calc(100vh-2rem)] overflow-y-auto">
+      {/* mobile: collapsible facts */}
+      <details className="lg:hidden border border-neutral-800 rounded-lg">
+        <summary className="p-3 text-xs uppercase tracking-widest text-neutral-500 cursor-pointer select-none">
+          Extracted facts ({facts.length})
+        </summary>
+        <div className="p-4 pt-1">{factsList}</div>
+      </details>
+
+      {/* right: state panel (desktop) */}
+      <aside className="hidden lg:block border border-neutral-800 rounded-lg p-4 space-y-5 text-sm max-h-[calc(100vh-2rem)] overflow-y-auto">
         <div>
           <div className="text-xs uppercase tracking-widest text-neutral-500">Questions remaining</div>
           <div className="text-3xl font-bold mt-1">{questionsLeft}</div>
@@ -698,23 +750,11 @@ export default function Home() {
           ) : (
             <p className="mt-1 text-xs text-neutral-600 italic">The meter stays in your gut on a cold case.</p>
           )}
-          <div className="mt-1 text-xs text-neutral-600">
-            {suspicion >= 70 ? 'Hostile' : suspicion >= 30 ? 'Guarded' : 'Cooperative'}
-          </div>
+          <div className="mt-1 text-xs text-neutral-600">{band}</div>
         </div>
         <div>
           <div className="text-xs uppercase tracking-widest text-neutral-500">Extracted facts</div>
-          {facts.length === 0 ? (
-            <p className="mt-1 text-xs text-neutral-600">Nothing yet. Press the evidence.</p>
-          ) : (
-            <ul className="mt-1 space-y-1.5">
-              {facts.map((f, i) => (
-                <li key={i} className="text-xs text-neutral-400 border-l-2 border-amber-700 pl-2">
-                  {f}
-                </li>
-              ))}
-            </ul>
-          )}
+          {factsList}
         </div>
       </aside>
     </main>

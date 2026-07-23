@@ -153,5 +153,5 @@ export default function Portrait({
     };
   }, [src]);
 
-  return <div ref={mountRef} style={{ width: SIZE, height: SIZE }} />;
+  return <div ref={mountRef} className="portrait-mount" style={{ width: '100%', maxWidth: SIZE, aspectRatio: '1 / 1' }} />;
 }
